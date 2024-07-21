@@ -8,6 +8,10 @@ const int tempPot = A1;
 const int ledPin = 13;
 int tempObjetivo = 30;
 
+// Definir los pines del motor paso a paso
+const int stepPin = 2;
+const int dirPin = 3;
+
 // Valor de la resistencia a 25 grados Celsius del termistor (en ohms)
 const float termistorNominal = 100000;
 
@@ -23,31 +27,42 @@ const float resistorSerie = 10000;
 // Inicializar con la dirección I2C 0x3C (para la pantalla 128x64 SSD1306)
 Adafruit_SSD1306 display(128, 64, &Wire, -1);
 
-void setup() {
-  Serial.begin(9600);  // Iniciar comunicación serial
+void setup()
+{
+  Serial.begin(9600); // Iniciar comunicación serial
   pinMode(ledPin, OUTPUT);
+
+  // Iniciar los pines del motor paso a paso
+  pinMode(stepPin, OUTPUT);
+  pinMode(dirPin, OUTPUT);
 
   // Iniciar la comunicación I2C
   Wire.begin();
 
   // Iniciar la pantalla OLED SSD1306 con la dirección I2C 0x3C
-  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
+  {
     Serial.println(F("SSD1306 allocation failed"));
-    for (;;);
+    for (;;)
+      ;
   }
 
   // Limpiar la pantalla
   display.clearDisplay();
   display.setTextColor(SSD1306_WHITE);
-  
+
   // Ajustar el tamaño del texto (valores válidos: 1, 2, 3)
-  display.setTextSize(2);  // Tamaño 2: texto más grande
-  
+  display.setTextSize(2); // Tamaño 2: texto más grande
+
   display.setCursor(0, 0);
-  display.display();  // Mostrar cambios en la pantalla OLED
+
+  display.display(); // Mostrar cambios en la pantalla OLED
 }
 
-void loop() {
+void loop()
+{
+  moverMotor(direccion, pasos);
+
   // Leer el valor del pin analógico A0
   int lectura = analogRead(termistorPin);
 
@@ -59,12 +74,12 @@ void loop() {
   float temperatura;
   temperatura = 1.0 / (log(resistencia / termistorNominal) / betaCoefficiente + 1.0 / (temperaturaNominal + 273.15)) - 273.15;
 
-  //Analogic READ
+  // Analogic READ
   int tempControl = analogRead(tempPot);
-  float tempObjetivo = map(tempControl , 0, 1023 , 0 , 300);
+  float tempObjetivo = map(tempControl, 0, 1023, 0, 300);
 
   Serial.print("Temperatura Objetivo : ");
-  Serial.print (tempObjetivo);
+  Serial.print(tempObjetivo);
   Serial.print(" // ");
   // Mostrar temperatura por el puerto serial
   Serial.print("Temperatura Actual : ");
@@ -77,36 +92,41 @@ void loop() {
   // Mostrar temperatura en la pantalla OLED
   display.setCursor(0, 0);
   display.print("Filament ");
-  display.drawLine(0,15,128,15, WHITE);
-  display.setCursor(0, 20);  // Mover el cursor a la siguiente línea
+  display.drawLine(0, 15, 128, 15, WHITE);
+  display.setCursor(0, 20); // Mover el cursor a la siguiente línea
   display.print("t :");
-  display.setCursor(45 , 20);
+  display.setCursor(45, 20);
   display.print(temperatura);
-  display.setCursor(0 , 37);
+  display.setCursor(0, 37);
   display.print("s :");
-  display.setCursor(45 , 37);
+  display.setCursor(45, 37);
   display.print(tempObjetivo);
   display.display();
 
   // Encender el LED si la temperatura supera los 28 grados Celsius
-  if (temperatura < tempObjetivo ) {
+  if (temperatura < tempObjetivo)
+  {
     digitalWrite(ledPin, HIGH);
-    //display.setCursor(0,37);
-    //display.print("WARNING!");
-    //display.display();
-    
     Serial.println("Rele : ON");
-    
-  } else {
+  }
+  else
+  {
     digitalWrite(ledPin, LOW);
-    //display.setCursor(0,35);
-    //display.print("   ");
-    //display.display();
-    
     Serial.println("Rele : OFF");
-    
   }
 
   // Esperar un poco antes de tomar otra lectura
   delay(1000);
+}
+
+void | moverMotor(int direccion, int pasos)
+{
+  digitalWrite(dirPin, direccion);
+  for (int i = 0; i < pasos; i++)
+  {
+    digitalWrite(stepPin, HIGH);
+    delayMicroseconds(500);
+    digitalWrite(stepPin, LOW);
+    delayMicroseconds(500);
+  }
 }
